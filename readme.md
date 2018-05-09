@@ -1,1 +1,1 @@
-# Go Pacakage for Ptrace 
+# Go Package for Ptrace 
