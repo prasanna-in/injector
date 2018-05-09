@@ -8,21 +8,23 @@ import (
 type Proc struct {
 	Process *os.Process
 }
-
-
 func GetProcess(processID int) (Proc, error) {
 	process, err := os.FindProcess(processID)
 	return Proc{Process:process}, err
 }
 
-
 func (p *Proc ) Attach(f func(bool,  *Proc)(error))(error)  {
 	err := syscall.PtraceAttach(p.Process.Pid)
+	if err	== syscall.EPERM{
+		_,err := syscall.PtraceGetEventMsg(p.Process.Pid)
+		if err != nil {
+			return f(false,p)
+		}
+	}
 	if err != nil{
-		return err
+		return f(false,p)
 	}
 	return f(true,p)
-
 }
 
 func (p *Proc) GetRegisters(f func(*syscall.PtraceRegs)(*syscall.PtraceRegs, error))(*syscall.PtraceRegs, error)  {
@@ -74,3 +76,22 @@ func (p *Proc ) PokeText(addr uintptr, out []byte, f func(int, []byte)(int, erro
 	return count, err
 }
 
+func (p *Proc) SetOptions(options int) (error) {
+	return syscall.PtraceSetOptions(p.Process.Pid,options)
+}
+
+func (p *Proc ) SingleStep(f func(bool,  *Proc)(error))(error)  {
+	err := syscall.PtraceSingleStep(p.Process.Pid)
+	if err != nil {
+		return  f(false,p)
+	}
+   return 	f(true,p)
+}
+
+func (p *Proc ) Syscall(signal int, f func(bool,  *Proc)(error)) (error)  {
+	err := syscall.PtraceSyscall(p.Process.Pid,signal)
+	if err != nil {
+		return f(false, p)
+	}
+	return f(true,p)
+}
